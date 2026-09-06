@@ -1277,6 +1277,8 @@ void Stream::NotifyStreamOpened(stream_id id) {
   // since the stream likely hasn't had any opporunity to get blocked
   // yet, but just for completeness, let's make sure.
   if (outbound_) session().ResumeStream(id);
+  // We inform, the js side that the pending stream is now available
+  EmitStreamAvailable();
 }
 
 void Stream::NotifyReadableEnded(error_code code) {
@@ -1885,6 +1887,14 @@ void Stream::SendStopSending(error_code code) {
 }
 
 // ============================================================================
+
+void Stream::EmitStreamAvailable() {
+  if (!env()->can_call_into_js()) {
+    return;
+  }
+  CallbackScope<Stream> cb_scope(this);
+  MakeCallback(BindingData::Get(env()).stream_available_callback(), 0, nullptr);
+}
 
 void Stream::EmitBlocked() {
   // state()->wants_block will be set from the javascript side if the
